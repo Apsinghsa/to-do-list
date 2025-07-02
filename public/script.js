@@ -1,23 +1,76 @@
-function addTask(){
+
+let inputField = document.querySelector("input");
+
+inputField.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    event.preventDefault(); 
+    addTask();
+  }
+});
+
+
+
+function render() {
+    fetch('/tasks')
+        .then(response => response.json())
+        .then(tasks => {
+            let taskList = document.querySelector("#task-list");
+            taskList.innerHTML = "";
+
+            tasks.forEach(task => {
+                let listElement = document.createElement("li");
+                let elementSpan = document.createElement("span");
+                let deleteTaskButton = document.createElement("button");
+
+                let taskName = document.createTextNode(task.taskname);
+                elementSpan.appendChild(taskName);
+
+                deleteTaskButton.innerText = "X";
+                deleteTaskButton.onclick = () => deleteTask(task.taskid);
+                elementSpan.appendChild(deleteTaskButton);
+                listElement.appendChild(elementSpan);
+                taskList.appendChild(listElement);
+            });
+        })
+        .catch(error => console.error('Error fetching tasks:', error));
+}
+
+function addTask() {
     let taskName = document.querySelector("input").value;
-    let taskID = "taskid"+Date.now();
-    let taskDiv = document.createElement("div");
-    taskDiv.setAttribute("id", taskID);
+    if (taskName.trim() === "") return;
 
-    let taskNameElement = document.createTextNode(taskName);
-    taskDiv.appendChild(taskNameElement);
-
-    let deleteButton = document.createElement("button");
-    deleteButton.onclick = ()=>deleteTask(taskID);
-    deleteButton.innerText = "delete task";
-    taskDiv.appendChild(deleteButton);
-
-    document.querySelector("#task-list").appendChild(taskDiv);
-
+    fetch('/tasks', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ taskname: taskName }),
+    })
+    .then(response => {
+        if (response.ok) {
+            render();
+        } else {
+            console.error('Error adding task:', response.statusText);
+        }
+    })
+    .catch(error => console.error('Error adding task:', error));
     document.querySelector("input").value = "";
 }
 
-function deleteTask(taskID){
-    let taskToDelete = document.querySelector("#"+taskID);
-    taskToDelete.remove();
+function deleteTask(taskid) {
+    fetch(`/tasks/${taskid}`, {
+        method: 'DELETE',
+    })
+    .then(response => {
+        if (response.ok) {
+            render(); 
+        } else {
+            console.error('Error deleting task:', response.statusText);
+        }
+    })
+    .catch(error => console.error('Error deleting task:', error));
 }
+
+window.onload = () => {
+    render();
+};
